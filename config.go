@@ -17,7 +17,7 @@ type Options struct {
 	Overwrite   bool
 }
 
-func Load(s Options) error {
+func Load(s *Options) error {
 	if s.Path == "" {
 		s.Path = "Config.yaml"
 	}
