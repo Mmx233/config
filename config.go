@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"github.com/Mmx233/tool"
+	"gopkg.in/yaml.v3"
 	"reflect"
 )
 
@@ -18,22 +19,29 @@ type Options struct {
 
 func Load(s Options) error {
 	if s.Path == "" {
-		s.Path = "Config.json"
+		s.Path = "Config.yaml"
 	}
 
 	//config not exist
 	if !tool.File.Exists(s.Path) {
-		if err := tool.File.WriteJson(
-			s.Path,
-			s.Default,
-		); err != nil {
-			return err
+		d, e := yaml.Marshal(s.Default)
+		if e != nil {
+			return e
+		}
+		if e = tool.File.Write(s.Path, d); e != nil {
+			return e
 		}
 		return NewConfig
 	}
 
-	if err := tool.File.ReadJson(s.Path, s.Config); err != nil {
-		return err
+	//read config
+	d, e := tool.File.Read(s.Path)
+	if e != nil {
+		return e
+	}
+	e = yaml.Unmarshal(d, s.Config)
+	if e != nil {
+		return e
 	}
 
 	// fill config with default value
@@ -49,7 +57,13 @@ func Load(s Options) error {
 
 	// fill back to ensure update
 	if s.Overwrite {
-		_ = tool.File.WriteJson(s.Path, s.Config)
+		d, e = yaml.Marshal(s.Config)
+		if e != nil {
+			return e
+		}
+		if e = tool.File.Write(s.Path, d); e != nil {
+			return e
+		}
 	}
 
 	return nil
