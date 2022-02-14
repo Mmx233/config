@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/Mmx233/tool"
 	"gopkg.in/yaml.v3"
+	"os"
 	"reflect"
 )
 
@@ -28,18 +29,19 @@ func Load(s *Options) error {
 		if e != nil {
 			return e
 		}
-		if e = tool.File.Write(s.Path, d); e != nil {
+		if e = tool.File.WriteAll(s.Path, d); e != nil {
 			return e
 		}
 		return NewConfig
 	}
 
 	//read config
-	d, e := tool.File.Read(s.Path)
+	f, e := os.OpenFile(s.Path, os.O_RDONLY, 0600)
 	if e != nil {
 		return e
 	}
-	e = yaml.Unmarshal(d, s.Config)
+	defer f.Close()
+	e = yaml.NewDecoder(f).Decode(s.Config)
 	if e != nil {
 		return e
 	}
@@ -57,13 +59,12 @@ func Load(s *Options) error {
 
 	// fill back to ensure update
 	if s.Overwrite {
-		d, e = yaml.Marshal(s.Config)
+		f, e := os.OpenFile(s.Path, os.O_WRONLY|os.O_CREATE, 0600)
 		if e != nil {
 			return e
 		}
-		if e = tool.File.Write(s.Path, d); e != nil {
-			return e
-		}
+		defer f.Close()
+		return yaml.NewEncoder(f).Encode(s.Config)
 	}
 
 	return nil
