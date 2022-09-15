@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-var NewConfig = errors.New("default config generated")
+var IsNewConfig = errors.New("default config generated")
 
 type Options struct {
 	Config      interface{}
@@ -18,38 +18,54 @@ type Options struct {
 	Overwrite   bool
 }
 
-func Load(s *Options) error {
+type Config struct {
+	opt *Options
+}
+
+func NewConfig(s *Options) *Config {
 	if s.Path == "" {
 		s.Path = "Config.yaml"
 	}
+	return &Config{opt: s}
+}
 
-	//config not exist
-	if !tool.File.Exists(s.Path) {
-		d, e := yaml.Marshal(s.Default)
-		if e != nil {
-			return e
-		}
-		if e = tool.File.WriteAll(s.Path, d); e != nil {
-			return e
-		}
-		return NewConfig
-	}
-
-	//read config
-	f, e := os.OpenFile(s.Path, os.O_RDONLY, 0600)
+func (a Config) Save() error {
+	f, e := os.OpenFile(a.opt.Path, os.O_WRONLY|os.O_CREATE, 0600)
 	if e != nil {
 		return e
 	}
 	defer f.Close()
-	e = yaml.NewDecoder(f).Decode(s.Config)
+	return yaml.NewEncoder(f).Encode(a.opt.Config)
+}
+
+func (a Config) Load() error {
+	//config not exist
+	if !tool.File.Exists(a.opt.Path) {
+		d, e := yaml.Marshal(a.opt.Default)
+		if e != nil {
+			return e
+		}
+		if e = tool.File.WriteAll(a.opt.Path, d); e != nil {
+			return e
+		}
+		return IsNewConfig
+	}
+
+	//read config
+	f, e := os.OpenFile(a.opt.Path, os.O_RDONLY, 0600)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	e = yaml.NewDecoder(f).Decode(a.opt.Config)
 	if e != nil {
 		return e
 	}
 
 	// fill config with default value
-	if s.FillDefault {
-		Config := reflect.ValueOf(s.Config).Elem()
-		Default := reflect.ValueOf(s.Default).Elem()
+	if a.opt.FillDefault {
+		Config := reflect.ValueOf(a.opt.Config).Elem()
+		Default := reflect.ValueOf(a.opt.Default).Elem()
 		for i := 0; i < Default.NumField(); i++ {
 			if !Default.Field(i).IsZero() && Config.Field(i).IsZero() {
 				Config.Field(i).Set(Default.Field(i))
@@ -58,18 +74,13 @@ func Load(s *Options) error {
 	}
 
 	// fill back to ensure update
-	if s.Overwrite {
-		f, e := os.OpenFile(s.Path, os.O_WRONLY|os.O_CREATE, 0600)
-		if e != nil {
-			return e
-		}
-		defer f.Close()
-		return yaml.NewEncoder(f).Encode(s.Config)
+	if a.opt.Overwrite {
+		return a.Save()
 	}
 
 	return nil
 }
 
 func IsNew(e error) bool {
-	return e == NewConfig
+	return e == IsNewConfig
 }
