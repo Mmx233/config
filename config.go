@@ -29,7 +29,11 @@ func NewConfig(s *Options) *Config {
 	return &Config{opt: s}
 }
 
-func (a Config) Save() error {
+func (a *Config) Init(s *Options) {
+	a.opt = NewConfig(s).opt
+}
+
+func (a *Config) Save() error {
 	f, e := os.OpenFile(a.opt.Path, os.O_WRONLY|os.O_CREATE, 0600)
 	if e != nil {
 		return e
@@ -38,7 +42,7 @@ func (a Config) Save() error {
 	return yaml.NewEncoder(f).Encode(a.opt.Config)
 }
 
-func (a Config) Load() error {
+func (a *Config) Load() error {
 	//config not exist
 	if !tool.File.Exists(a.opt.Path) {
 		d, e := yaml.Marshal(a.opt.Default)
