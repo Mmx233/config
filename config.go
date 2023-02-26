@@ -44,12 +44,14 @@ func (a *Config) Save() error {
 
 func (a *Config) Load() error {
 	//config not exist
-	if !tool.File.Exists(a.opt.Path) {
+	if exist, e := tool.File.Exists(a.opt.Path); e != nil {
+
+	} else if !exist {
 		d, e := yaml.Marshal(a.opt.Default)
 		if e != nil {
 			return e
 		}
-		if e = tool.File.WriteAll(a.opt.Path, d); e != nil {
+		if e = os.WriteFile(a.opt.Path, d, 0600); e != nil {
 			return e
 		}
 		return IsNewConfig
