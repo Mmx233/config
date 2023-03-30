@@ -34,7 +34,7 @@ func (a *Config) Init(s *Options) {
 }
 
 func (a *Config) Save() error {
-	f, e := os.OpenFile(a.opt.Path, os.O_WRONLY|os.O_CREATE, 0600)
+	f, e := os.OpenFile(a.opt.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if e != nil {
 		return e
 	}
